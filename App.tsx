@@ -1,257 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import React, { useState } from 'react';
+import { ShieldCheck, GraduationCap, ChevronRight, School, Instagram } from 'lucide-react';
+import StudentForm from './components/StudentForm';
+import AdminDashboard from './components/AdminDashboard';
+import Login from './components/Login';
+import { UserRole, AdminUser } from './types';
 
-interface Report {
-  id: string;
-  classroom: string;
-  date: string;
-  time: string;
-  reporter: string;
-  status: 'pending' | 'verified' | 'resolved';
-}
+const App: React.FC = () => {
+  const [viewState, setViewState] = useState<'HOME' | 'STUDENT' | 'PRE_AUTH_ADMIN' | 'ADMIN_DASHBOARD'>('HOME');
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
 
-function App() {
-  const [reports, setReports] = useState<Report[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    classroom: '',
-    date: '',
-    time: '',
-    reporter: ''
-  });
-  const [filter, setFilter] = useState<'all' | 'pending' | 'verified' | 'resolved'>('all');
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  useEffect(() => {
-    // Load reports from localStorage
-    const savedReports = localStorage.getItem('reports');
-    if (savedReports) {
-      setReports(JSON.parse(savedReports));
-    }
-  }, []);
-
-  useEffect(() => {
-    // Save reports to localStorage
-    if (reports.length > 0) {
-      localStorage.setItem('reports', JSON.stringify(reports));
-    }
-  }, [reports]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newReport: Report = {
-      id: Date.now().toString(),
-      ...formData,
-      status: 'pending'
-    };
-    setReports([newReport, ...reports]);
-    setFormData({ classroom: '', date: '', time: '', reporter: '' });
-    setShowForm(false);
-    setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 500);
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setViewState('HOME');
   };
 
-  const updateStatus = (id: string, status: 'pending' | 'verified' | 'resolved') => {
-    setReports(reports.map(report => 
-      report.id === id ? { ...report, status } : report
-    ));
+  const handleAdminLoginSuccess = (user: AdminUser) => {
+    setCurrentUser(user);
+    setViewState('ADMIN_DASHBOARD');
   };
 
-  const deleteReport = (id: string) => {
-    setReports(reports.filter(report => report.id !== id));
-  };
-
-  const filteredReports = filter === 'all' 
-    ? reports 
-    : reports.filter(report => report.status === filter);
-
-  return (
-    <div className="app">
-      {/* Animated Background */}
-      <div className="background-gradient"></div>
-      <div className="background-circles">
-        <div className="circle circle-1"></div>
-        <div className="circle circle-2"></div>
-        <div className="circle circle-3"></div>
-      </div>
-
-      <div className="container">
-        {/* Header */}
-        <header className="header">
-          <div className="header-content">
-            <h1 className="title">
-              <span className="icon">📚</span>
-              Laporan Kelas Kosong
-            </h1>
-            <p className="subtitle">Sistem Pelaporan Kelas Kosong Modern</p>
-          </div>
-          <button 
-            className="btn btn-primary"
-            onClick={() => setShowForm(!showForm)}
-          >
-            <span className="btn-icon">+</span>
-            {showForm ? 'Tutup Form' : 'Buat Laporan'}
-          </button>
-        </header>
-
-        {/* Form */}
-        {showForm && (
-          <div className="form-container slide-in">
-            <form onSubmit={handleSubmit} className="form">
-              <h2 className="form-title">Buat Laporan Baru</h2>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label htmlFor="classroom">Kelas</label>
-                  <input
-                    type="text"
-                    id="classroom"
-                    placeholder="Contoh: X-IPA 1"
-                    value={formData.classroom}
-                    onChange={(e) => setFormData({...formData, classroom: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="date">Tanggal</label>
-                  <input
-                    type="date"
-                    id="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="time">Waktu</label>
-                  <input
-                    type="time"
-                    id="time"
-                    value={formData.time}
-                    onChange={(e) => setFormData({...formData, time: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="reporter">Pelapor</label>
-                  <input
-                    type="text"
-                    id="reporter"
-                    placeholder="Nama Anda"
-                    value={formData.reporter}
-                    onChange={(e) => setFormData({...formData, reporter: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-              <button type="submit" className="btn btn-primary btn-submit">
-                <span className="btn-icon">✓</span>
-                Submit Laporan
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* Filter */}
-        <div className="filter-container">
-          <div className="filter-buttons">
-            {(['all', 'pending', 'verified', 'resolved'] as const).map((status) => (
-              <button
-                key={status}
-                className={`filter-btn ${filter === status ? 'active' : ''}`}
-                onClick={() => setFilter(status)}
-              >
-                {status === 'all' ? '🔍 Semua' :
-                 status === 'pending' ? '⏳ Pending' :
-                 status === 'verified' ? '✓ Verified' :
-                 '✅ Resolved'}
-              </button>
-            ))}
-          </div>
-          <div className="report-count">
-            Total: <span>{filteredReports.length}</span> laporan
-          </div>
-        </div>
-
-        {/* Reports List */}
-        <div className="reports-container">
-          {filteredReports.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">📋</div>
-              <h3>Belum Ada Laporan</h3>
-              <p>Klik tombol "Buat Laporan" untuk menambahkan laporan baru</p>
-            </div>
-          ) : (
-            <div className="reports-grid">
-              {filteredReports.map((report, index) => (
-                <div 
-                  key={report.id} 
-                  className={`report-card ${isAnimating && index === 0 ? 'pop-in' : 'fade-in'}`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="report-header">
-                    <h3 className="report-classroom">{report.classroom}</h3>
-                    <span className={`status-badge status-${report.status}`}>
-                      {report.status === 'pending' ? '⏳ Pending' :
-                       report.status === 'verified' ? '✓ Verified' :
-                       '✅ Resolved'}
-                    </span>
-                  </div>
-                  <div className="report-details">
-                    <div className="detail-item">
-                      <span className="detail-icon">📅</span>
-                      <span>{new Date(report.date).toLocaleDateString('id-ID', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-icon">🕐</span>
-                      <span>{report.time}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-icon">👤</span>
-                      <span>{report.reporter}</span>
-                    </div>
-                  </div>
-                  <div className="report-actions">
-                    {report.status === 'pending' && (
-                      <button 
-                        className="btn btn-small btn-verify"
-                        onClick={() => updateStatus(report.id, 'verified')}
-                      >
-                        ✓ Verify
-                      </button>
-                    )}
-                    {report.status === 'verified' && (
-                      <button 
-                        className="btn btn-small btn-resolve"
-                        onClick={() => updateStatus(report.id, 'resolved')}
-                      >
-                        ✅ Resolve
-                      </button>
-                    )}
-                    <button 
-                      className="btn btn-small btn-delete"
-                      onClick={() => deleteReport(report.id)}
-                    >
-                      🗑️ Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <footer className="footer">
-          <p>© 2025 Laporan Kelas Kosong V2 • Made with ❤️ by arifwbo</p>
-        </footer>
-      </div>
+  const CreatorFooter = () => (
+    <div className="text-center mt-8">
+      <p className="text-sm text-slate-600 mb-2">© 2025 SMP Negeri 4 Samarinda</p>
+      <a 
+        href="https://www.instagram.com/arifwbo/" 
+        target="_blank" 
+        rel="noreferrer"
+        className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-pink-600 transition-colors group"
+      >
+        <span>Created by</span>
+        <span className="font-bold group-hover:underline">ArifWbo</span>
+        <Instagram className="w-4 h-4 group-hover:scale-110 transition-transform" />
+      </a>
     </div>
   );
-}
+
+  if (viewState === 'HOME') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 sm:p-6 font-sans relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        </div>
+
+        <div className="w-full max-w-md z-10 animate-fade-in-up">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-2xl mb-6 transform hover:scale-110 transition-transform duration-300">
+              <School className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mb-3 tracking-tight">
+              SiswaConnect
+            </h1>
+            <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-sm mx-auto">
+              Sistem Pelaporan Kegiatan Belajar Mengajar & Ketidakhadiran
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
+              <School className="w-4 h-4" />
+              <span className="font-medium">SMP Negeri 4 Samarinda</span>
+            </div>
+          </div>
+          
+          {/* Action Cards */}
+          <div className="space-y-4 mb-6">
+            {/* Student Access */}
+            <button
+              onClick={() => setViewState('STUDENT')}
+              className="group w-full bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 p-6 rounded-2xl shadow-lg border-2 border-transparent hover:border-blue-200 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                    <GraduationCap className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">
+                      Akses Siswa
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      Lapor kelas kosong atau guru tidak hadir
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </div>
+            </button>
+
+            {/* Admin Access */}
+            <button
+              onClick={() => setViewState('PRE_AUTH_ADMIN')}
+              className="group w-full bg-white hover:bg-gradient-to-r hover:from-purple-50 hover:to-indigo-50 p-6 rounded-2xl shadow-lg border-2 border-transparent hover:border-purple-200 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                    <ShieldCheck className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">
+                      Akses Admin
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      Guru Piket & Administrator
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+              </div>
+            </button>
+          </div>
+
+          <CreatorFooter />
+        </div>
+      </div>
+    );
+  }
+
+  if (viewState === 'STUDENT') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <StudentForm onBack={() => setViewState('HOME')} />
+      </div>
+    );
+  }
+
+  if (viewState === 'PRE_AUTH_ADMIN') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50">
+        <Login 
+          onBack={() => setViewState('HOME')} 
+          onLoginSuccess={handleAdminLoginSuccess}
+        />
+      </div>
+    );
+  }
+
+  if (viewState === 'ADMIN_DASHBOARD' && currentUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <AdminDashboard 
+          currentUser={currentUser} 
+          onLogout={handleLogout} 
+        />
+      </div>
+    );
+  }
+
+  return null;
+};
 
 export default App;
