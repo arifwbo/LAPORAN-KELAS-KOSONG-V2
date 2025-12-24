@@ -1,444 +1,257 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Animated,
-  Dimensions,
-  StatusBar,
-  Platform,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Animatable from 'react-native-animatable';
-
-const { width, height } = Dimensions.get('window');
+import './App.css';
 
 interface Report {
   id: string;
-  className: string;
-  time: string;
+  classroom: string;
   date: string;
-  reason: string;
+  time: string;
+  reporter: string;
+  status: 'pending' | 'verified' | 'resolved';
 }
 
-const App = () => {
-  const [className, setClassName] = useState('');
-  const [time, setTime] = useState('');
-  const [reason, setReason] = useState('');
+function App() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(-100));
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    classroom: '',
+    date: '',
+    time: '',
+    reporter: ''
+  });
+  const [filter, setFilter] = useState<'all' | 'pending' | 'verified' | 'resolved'>('all');
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
-    // Entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 20,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Load reports from localStorage
+    const savedReports = localStorage.getItem('reports');
+    if (savedReports) {
+      setReports(JSON.parse(savedReports));
+    }
   }, []);
 
-  const handleSubmit = () => {
-    if (!className || !time || !reason) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
+  useEffect(() => {
+    // Save reports to localStorage
+    if (reports.length > 0) {
+      localStorage.setItem('reports', JSON.stringify(reports));
     }
+  }, [reports]);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     const newReport: Report = {
       id: Date.now().toString(),
-      className,
-      time,
-      date: new Date().toLocaleDateString('id-ID'),
-      reason,
+      ...formData,
+      status: 'pending'
     };
-
     setReports([newReport, ...reports]);
-    
-    // Clear form
-    setClassName('');
-    setTime('');
-    setReason('');
-
-    Alert.alert('Success', 'Report submitted successfully!');
+    setFormData({ classroom: '', date: '', time: '', reporter: '' });
+    setShowForm(false);
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 500);
   };
 
-  const handleDelete = (id: string) => {
-    Alert.alert(
-      'Delete Report',
-      'Are you sure you want to delete this report?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => setReports(reports.filter(report => report.id !== id)),
-        },
-      ]
-    );
+  const updateStatus = (id: string, status: 'pending' | 'verified' | 'resolved') => {
+    setReports(reports.map(report => 
+      report.id === id ? { ...report, status } : report
+    ));
   };
+
+  const deleteReport = (id: string) => {
+    setReports(reports.filter(report => report.id !== id));
+  };
+
+  const filteredReports = filter === 'all' 
+    ? reports 
+    : reports.filter(report => report.status === filter);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={['#667eea', '#764ba2', '#f093fb']}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <Animatable.View 
-            animation="fadeInDown" 
-            duration={1000}
-            style={styles.header}
+    <div className="app">
+      {/* Animated Background */}
+      <div className="background-gradient"></div>
+      <div className="background-circles">
+        <div className="circle circle-1"></div>
+        <div className="circle circle-2"></div>
+        <div className="circle circle-3"></div>
+      </div>
+
+      <div className="container">
+        {/* Header */}
+        <header className="header">
+          <div className="header-content">
+            <h1 className="title">
+              <span className="icon">📚</span>
+              Laporan Kelas Kosong
+            </h1>
+            <p className="subtitle">Sistem Pelaporan Kelas Kosong Modern</p>
+          </div>
+          <button 
+            className="btn btn-primary"
+            onClick={() => setShowForm(!showForm)}
           >
-            <Text style={styles.headerTitle}>📚 Laporan Kelas Kosong</Text>
-            <Text style={styles.headerSubtitle}>Version 2.0</Text>
-          </Animatable.View>
+            <span className="btn-icon">+</span>
+            {showForm ? 'Tutup Form' : 'Buat Laporan'}
+          </button>
+        </header>
 
-          {/* Form Card */}
-          <Animated.View 
-            style={[
-              styles.card,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
-              style={styles.cardGradient}
-            >
-              <Text style={styles.cardTitle}>Submit New Report</Text>
-
-              {/* Class Name Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Class Name</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., XII RPL 1"
-                    placeholderTextColor="#999"
-                    value={className}
-                    onChangeText={setClassName}
+        {/* Form */}
+        {showForm && (
+          <div className="form-container slide-in">
+            <form onSubmit={handleSubmit} className="form">
+              <h2 className="form-title">Buat Laporan Baru</h2>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label htmlFor="classroom">Kelas</label>
+                  <input
+                    type="text"
+                    id="classroom"
+                    placeholder="Contoh: X-IPA 1"
+                    value={formData.classroom}
+                    onChange={(e) => setFormData({...formData, classroom: e.target.value})}
+                    required
                   />
-                </View>
-              </View>
-
-              {/* Time Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Time</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g., 08:00 - 09:30"
-                    placeholderTextColor="#999"
-                    value={time}
-                    onChangeText={setTime}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="date">Tanggal</label>
+                  <input
+                    type="date"
+                    id="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    required
                   />
-                </View>
-              </View>
-
-              {/* Reason Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Reason</Text>
-                <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Enter reason for empty classroom..."
-                    placeholderTextColor="#999"
-                    value={reason}
-                    onChangeText={setReason}
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
+                </div>
+                <div className="form-group">
+                  <label htmlFor="time">Waktu</label>
+                  <input
+                    type="time"
+                    id="time"
+                    value={formData.time}
+                    onChange={(e) => setFormData({...formData, time: e.target.value})}
+                    required
                   />
-                </View>
-              </View>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="reporter">Pelapor</label>
+                  <input
+                    type="text"
+                    id="reporter"
+                    placeholder="Nama Anda"
+                    value={formData.reporter}
+                    onChange={(e) => setFormData({...formData, reporter: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+              <button type="submit" className="btn btn-primary btn-submit">
+                <span className="btn-icon">✓</span>
+                Submit Laporan
+              </button>
+            </form>
+          </div>
+        )}
 
-              {/* Submit Button */}
-              <TouchableOpacity
-                onPress={handleSubmit}
-                activeOpacity={0.8}
+        {/* Filter */}
+        <div className="filter-container">
+          <div className="filter-buttons">
+            {(['all', 'pending', 'verified', 'resolved'] as const).map((status) => (
+              <button
+                key={status}
+                className={`filter-btn ${filter === status ? 'active' : ''}`}
+                onClick={() => setFilter(status)}
               >
-                <LinearGradient
-                  colors={['#667eea', '#764ba2']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.submitButton}
-                >
-                  <Text style={styles.submitButtonText}>Submit Report</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </LinearGradient>
-          </Animated.View>
+                {status === 'all' ? '🔍 Semua' :
+                 status === 'pending' ? '⏳ Pending' :
+                 status === 'verified' ? '✓ Verified' :
+                 '✅ Resolved'}
+              </button>
+            ))}
+          </div>
+          <div className="report-count">
+            Total: <span>{filteredReports.length}</span> laporan
+          </div>
+        </div>
 
-          {/* Reports List */}
-          {reports.length > 0 && (
-            <Animatable.View 
-              animation="fadeInUp" 
-              duration={800}
-              style={styles.reportsSection}
-            >
-              <Text style={styles.reportsTitle}>Recent Reports</Text>
-              {reports.map((report, index) => (
-                <Animatable.View
-                  key={report.id}
-                  animation="fadeInUp"
-                  delay={index * 100}
-                  style={styles.reportCard}
+        {/* Reports List */}
+        <div className="reports-container">
+          {filteredReports.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">📋</div>
+              <h3>Belum Ada Laporan</h3>
+              <p>Klik tombol "Buat Laporan" untuk menambahkan laporan baru</p>
+            </div>
+          ) : (
+            <div className="reports-grid">
+              {filteredReports.map((report, index) => (
+                <div 
+                  key={report.id} 
+                  className={`report-card ${isAnimating && index === 0 ? 'pop-in' : 'fade-in'}`}
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
-                    style={styles.reportCardGradient}
-                  >
-                    <View style={styles.reportHeader}>
-                      <View>
-                        <Text style={styles.reportClassName}>{report.className}</Text>
-                        <Text style={styles.reportDate}>📅 {report.date}</Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => handleDelete(report.id)}
-                        style={styles.deleteButton}
+                  <div className="report-header">
+                    <h3 className="report-classroom">{report.classroom}</h3>
+                    <span className={`status-badge status-${report.status}`}>
+                      {report.status === 'pending' ? '⏳ Pending' :
+                       report.status === 'verified' ? '✓ Verified' :
+                       '✅ Resolved'}
+                    </span>
+                  </div>
+                  <div className="report-details">
+                    <div className="detail-item">
+                      <span className="detail-icon">📅</span>
+                      <span>{new Date(report.date).toLocaleDateString('id-ID', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-icon">🕐</span>
+                      <span>{report.time}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-icon">👤</span>
+                      <span>{report.reporter}</span>
+                    </div>
+                  </div>
+                  <div className="report-actions">
+                    {report.status === 'pending' && (
+                      <button 
+                        className="btn btn-small btn-verify"
+                        onClick={() => updateStatus(report.id, 'verified')}
                       >
-                        <Text style={styles.deleteButtonText}>🗑️</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.reportDetails}>
-                      <Text style={styles.reportTime}>⏰ {report.time}</Text>
-                      <Text style={styles.reportReason}>💬 {report.reason}</Text>
-                    </View>
-                  </LinearGradient>
-                </Animatable.View>
+                        ✓ Verify
+                      </button>
+                    )}
+                    {report.status === 'verified' && (
+                      <button 
+                        className="btn btn-small btn-resolve"
+                        onClick={() => updateStatus(report.id, 'resolved')}
+                      >
+                        ✅ Resolve
+                      </button>
+                    )}
+                    <button 
+                      className="btn btn-small btn-delete"
+                      onClick={() => deleteReport(report.id)}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
               ))}
-            </Animatable.View>
+            </div>
           )}
+        </div>
 
-          {/* Empty State */}
-          {reports.length === 0 && (
-            <Animatable.View 
-              animation="pulse" 
-              iterationCount="infinite"
-              duration={2000}
-              style={styles.emptyState}
-            >
-              <Text style={styles.emptyStateText}>📝</Text>
-              <Text style={styles.emptyStateTitle}>No Reports Yet</Text>
-              <Text style={styles.emptyStateSubtitle}>
-                Submit your first empty classroom report above
-              </Text>
-            </Animatable.View>
-          )}
-        </ScrollView>
-      </LinearGradient>
-    </View>
+        {/* Footer */}
+        <footer className="footer">
+          <p>© 2025 Laporan Kelas Kosong V2 • Made with ❤️ by arifwbo</p>
+        </footer>
+      </div>
+    </div>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  gradient: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 40,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 5,
-    fontWeight: '600',
-  },
-  card: {
-    borderRadius: 20,
-    marginBottom: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  cardGradient: {
-    borderRadius: 20,
-    padding: 25,
-  },
-  cardTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#667eea',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  input: {
-    padding: 15,
-    fontSize: 16,
-    color: '#333',
-  },
-  textAreaWrapper: {
-    minHeight: 100,
-  },
-  textArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  submitButton: {
-    borderRadius: 12,
-    padding: 18,
-    alignItems: 'center',
-    marginTop: 10,
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  reportsSection: {
-    marginTop: 10,
-  },
-  reportsTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 15,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  reportCard: {
-    borderRadius: 16,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  reportCardGradient: {
-    borderRadius: 16,
-    padding: 20,
-  },
-  reportHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  reportClassName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#667eea',
-    marginBottom: 5,
-  },
-  reportDate: {
-    fontSize: 14,
-    color: '#666',
-  },
-  deleteButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,0,0,0.1)',
-  },
-  deleteButtonText: {
-    fontSize: 20,
-  },
-  reportDetails: {
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: 12,
-  },
-  reportTime: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  reportReason: {
-    fontSize: 15,
-    color: '#666',
-    lineHeight: 22,
-  },
-  emptyState: {
-    alignItems: 'center',
-    marginTop: 50,
-    padding: 30,
-  },
-  emptyStateText: {
-    fontSize: 64,
-    marginBottom: 15,
-  },
-  emptyStateTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  emptyStateSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    textAlign: 'center',
-  },
-});
+}
 
 export default App;
