@@ -1,7 +1,10 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Pada Electron Main process yang dicompile ke CommonJS, __dirname tersedia secara global.
+// Untuk ES Module, kita perlu membuat __dirname sendiri
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
