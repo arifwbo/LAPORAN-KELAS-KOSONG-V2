@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { mockService } from '../services/mockService';
 import { Teacher, FormData, ClassRoom } from '../types';
-import { CheckCircle2, AlertCircle, Search, ChevronDown, User, Clock, FileText, Camera, Upload, School } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Search, ChevronDown, User, Clock, FileText, Camera, Upload, School, ArrowLeft } from 'lucide-react';
 
-const StudentForm: React.FC = () => {
+interface StudentFormProps {
+  onBack: () => void;
+}
+
+const StudentForm: React.FC<StudentFormProps> = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -121,6 +125,13 @@ const StudentForm: React.FC = () => {
     <>
       <div className="bg-white rounded-2xl shadow-card border border-slate-100 p-6 md:p-8 animate-fade-in-up">
         <div className="mb-8">
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-800 font-medium mb-4 transition-colors group"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span>Kembali</span>
+          </button>
           <h2 className="text-2xl font-bold text-slate-800">Form Laporan</h2>
           <p className="text-slate-500 text-sm mt-1">Silakan isi data ketidakhadiran guru dengan benar.</p>
         </div>
